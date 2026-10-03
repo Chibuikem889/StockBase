@@ -1,0 +1,466 @@
+gi<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f2">
+  <title>Stockbase | Inventory</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202a22;
+      --muted: #758078;
+      --line: #e6eae5;
+      --paper: #ffffff;
+      --canvas: #f4f6f2;
+      --green: #237a4b;
+      --green-soft: #e8f4ec;
+      --red: #bf4545;
+      --red-soft: #fff0ee;
+      --amber: #9a6c22;
+      --shadow: 0 10px 30px rgba(32, 42, 34, .045);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); min-width: 320px; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1180px, 100%); margin: 0 auto; padding: 26px 24px 34px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
+    .brand { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .brand-mark { width: 42px; height: 42px; border-radius: 14px; background: var(--green); display: grid; place-items: center; color: white; flex: none; }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .brand-name { font-size: 18px; font-weight: 750; letter-spacing: 0; }
+    .brand-caption { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .currency-wrap { position: relative; }
+    .currency-wrap:after { content: "⌄"; position: absolute; right: 11px; top: 8px; color: var(--muted); pointer-events: none; }
+    .currency { appearance: none; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 9px 30px 9px 12px; color: var(--ink); font-weight: 650; }
+    .button { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 10px; padding: 10px 13px; font-size: 13px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; transition: background .15s, border-color .15s, transform .15s; }
+    .button:hover { border-color: #cbd5cc; background: #fbfcfa; }
+    .button:active { transform: translateY(1px); }
+    .button svg { width: 16px; height: 16px; }
+    .button-primary { background: var(--green); color: white; border-color: var(--green); }
+    .button-primary:hover { background: #1d6b41; border-color: #1d6b41; }
+    .button-quiet { padding: 8px 10px; }
+    .button-danger { color: var(--red); }
+    .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 31px); line-height: 1.15; letter-spacing: -.7px; }
+    .subheading { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; margin-bottom: 22px; }
+    .stat { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 17px 18px; min-width: 0; box-shadow: var(--shadow); }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .stat-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: #f1f4f1; color: #65736a; font-size: 15px; }
+    .stat-value { font-size: 24px; font-weight: 740; letter-spacing: -.5px; margin-top: 13px; overflow-wrap: anywhere; }
+    .stat-value.profit { color: var(--green); }
+    .stat-value.low { color: var(--red); }
+    .stat-note { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 15px; box-shadow: var(--shadow); overflow: hidden; }
+    .toolbar { padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
+    .toolbar-left { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+    .searchbox { min-width: 100px; max-width: 340px; width: 100%; position: relative; }
+    .searchbox svg { position: absolute; left: 12px; top: 11px; width: 16px; height: 16px; color: #859087; pointer-events: none; }
+    .searchbox input, .filter-select { border: 1px solid var(--line); border-radius: 9px; height: 39px; background: white; color: var(--ink); outline: none; }
+    .searchbox input { width: 100%; padding: 0 12px 0 37px; }
+    .searchbox input:focus, .filter-select:focus, .field input:focus, .field select:focus { border-color: #76a987; box-shadow: 0 0 0 3px rgba(35, 122, 75, .1); }
+    .searchbox input::placeholder { color: #9ba49d; }
+    .filter-select { padding: 0 30px 0 11px; max-width: 170px; }
+    .toolbar-right { display: flex; gap: 8px; align-items: center; }
+    .result-count { color: var(--muted); font-size: 12px; white-space: nowrap; padding: 0 3px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { color: #808b82; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; font-weight: 700; padding: 12px 16px; background: #fcfdfb; white-space: nowrap; }
+    td { border-top: 1px solid #edf0ed; padding: 14px 16px; font-size: 13px; white-space: nowrap; }
+    tbody tr:hover { background: #fcfdfb; }
+    .product-name { font-weight: 670; }
+    .category-pill { display: inline-block; border-radius: 6px; background: #f1f4f1; color: #627067; padding: 4px 8px; font-size: 11px; }
+    .money { font-variant-numeric: tabular-nums; }
+    .quantity { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .quantity.is-low { color: var(--red); }
+    .low-pill { display: inline-flex; align-items: center; margin-left: 6px; border-radius: 5px; background: var(--red-soft); color: var(--red); padding: 3px 6px; font-size: 10px; font-weight: 700; }
+    .row-actions { display: flex; gap: 5px; justify-content: flex-end; }
+    .icon-button { border: 0; background: transparent; color: #7a867d; width: 31px; height: 31px; border-radius: 7px; display: grid; place-items: center; }
+    .icon-button:hover { color: var(--ink); background: #eff3ef; }
+    .icon-button svg { width: 16px; height: 16px; }
+    .icon-button.stock-action { color: var(--green); }
+    .empty-state { text-align: center; padding: 54px 16px; color: var(--muted); }
+    .empty-symbol { font-size: 27px; margin-bottom: 9px; }
+    .empty-title { color: var(--ink); font-weight: 700; font-size: 15px; }
+    .empty-copy { font-size: 13px; margin: 6px 0 16px; }
+    .how-it-works { text-align: center; padding: 25px 10px 0; color: var(--muted); font-size: 12px; }
+    .how-it-works strong { color: #5d6a60; font-weight: 600; }
+    dialog { border: 1px solid var(--line); padding: 0; width: min(460px, calc(100% - 28px)); border-radius: 16px; color: var(--ink); box-shadow: 0 24px 80px rgba(26, 37, 29, .2); max-height: min(90vh, 760px); }
+    dialog::backdrop { background: rgba(29, 39, 31, .37); backdrop-filter: blur(2px); }
+    .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 21px 22px 16px; border-bottom: 1px solid var(--line); }
+    .dialog-title { margin: 0; font-size: 18px; letter-spacing: -.2px; }
+    .dialog-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .close-button { border: 0; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; padding: 0 2px; }
+    .dialog-body { padding: 19px 22px 22px; overflow-y: auto; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { font-size: 12px; font-weight: 650; color: #465349; }
+    .field input, .field select { width: 100%; min-width: 0; height: 41px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; background: white; outline: none; color: var(--ink); }
+    .field input::placeholder { color: #a2aaa4; }
+    .field-hint { color: var(--muted); font-size: 11px; }
+    .form-error { color: var(--red); font-size: 12px; min-height: 16px; margin: 12px 0 0; }
+    .dialog-footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 15px; }
+    .movement-preview { margin-top: 15px; padding: 12px; border-radius: 9px; background: #f5f7f4; color: #5c695f; font-size: 12px; }
+    .movement-preview strong { color: var(--ink); }
+    .print-only { display: none; }
+    @media (max-width: 850px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .stat-value { font-size: 22px; }
+      th, td { padding-left: 13px; padding-right: 13px; }
+    }
+    @media (max-width: 600px) {
+      .shell { padding: 17px 14px 26px; }
+      .topbar { margin-bottom: 22px; }
+      .brand-caption { display: none; }
+      .brand-name { font-size: 16px; }
+      .brand-mark { width: 38px; height: 38px; border-radius: 12px; }
+      .top-actions { gap: 7px; }
+      .currency { padding: 8px 26px 8px 9px; font-size: 12px; }
+      .currency-wrap:after { right: 8px; top: 6px; }
+      .top-actions .button { padding: 9px; width: 38px; height: 38px; }
+      .top-actions .button span { display: none; }
+      .page-heading { align-items: center; margin-bottom: 17px; }
+      .page-heading .button { width: 40px; height: 40px; padding: 0; flex: none; }
+      .page-heading .button span { display: none; }
+      h1 { font-size: 25px; }
+      .subheading { font-size: 12px; }
+      .stats { gap: 9px; margin-bottom: 16px; }
+      .stat { padding: 13px; border-radius: 12px; }
+      .stat-label { font-size: 11px; }
+      .stat-icon { width: 27px; height: 27px; }
+      .stat-value { font-size: clamp(17px, 5vw, 21px); margin-top: 10px; }
+      .stat-note { font-size: 10px; }
+      .toolbar { padding: 11px; align-items: stretch; flex-direction: column; }
+      .toolbar-left { gap: 7px; }
+      .searchbox { flex: 1; }
+      .filter-select { max-width: 130px; font-size: 12px; }
+      .toolbar-right { justify-content: space-between; }
+      .toolbar-right .button { flex: 1; padding: 9px 7px; font-size: 11px; }
+      .result-count { font-size: 11px; }
+      .table-scroll { overflow-x: auto; }
+      table { min-width: 760px; }
+      th { font-size: 9px; }
+      td { font-size: 12px; }
+      .how-it-works { font-size: 11px; padding-top: 21px; }
+    }
+    @media print {
+      :root { --canvas: white; }
+      body { background: white; }
+      .shell { width: 100%; padding: 0; }
+      .top-actions, .page-heading .button, .toolbar, .row-actions, .how-it-works { display: none !important; }
+      .topbar { margin-bottom: 16px; }
+      .stats { grid-template-columns: repeat(4, 1fr); }
+      .panel, .stat { box-shadow: none; }
+      .table-scroll { overflow: visible; }
+      table { min-width: 0; }
+      th, td { padding: 8px 6px; font-size: 10px; }
+      .print-only { display: block; color: #555; font-size: 11px; margin: -10px 0 14px; }
+      tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/><path d="m7.5 5 9 4"/></svg></div>
+        <div><div class="brand-name">Stockbase</div><div class="brand-caption">Your inventory, in one place</div></div>
+      </div>
+      <div class="top-actions">
+        <label class="currency-wrap"><span class="sr-only" style="position:absolute;clip:rect(0,0,0,0)">Currency</span><select id="currencySelect" class="currency" aria-label="Currency"><option value="₦">₦ NGN</option><option value="$">$ USD</option><option value="£">£ GBP</option><option value="€">€ EUR</option><option value="GH₵">GH₵ GHS</option><option value="KSh">KSh KES</option><option value="R">R ZAR</option></select></label>
+        <button class="button" id="exportTop" type="button" aria-label="Export CSV" title="Export CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg><span>Export</span></button>
+      </div>
+    </header>
+
+    <section class="page-heading">
+      <div><h1>Inventory</h1><p class="subheading">A clear view of what you have in stock.</p></div>
+      <button class="button button-primary" id="addProductButton" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>Add product</span></button>
+    </section>
+
+    <section class="stats" aria-label="Inventory overview">
+      <article class="stat"><div class="stat-top"><span class="stat-label">Total products</span><span class="stat-icon">▤</span></div><div class="stat-value" id="totalProducts">0</div><div class="stat-note">Unique products tracked</div></article>
+      <article class="stat"><div class="stat-top"><span class="stat-label">Stock value</span><span class="stat-icon">◈</span></div><div class="stat-value" id="totalStockValue">₦0</div><div class="stat-note">At buying price</div></article>
+      <article class="stat"><div class="stat-top"><span class="stat-label">Potential profit</span><span class="stat-icon" style="color:var(--green);background:var(--green-soft)">↗</span></div><div class="stat-value profit" id="totalPotentialProfit">₦0</div><div class="stat-note">If all current stock sells</div></article>
+      <article class="stat"><div class="stat-top"><span class="stat-label">Low in stock</span><span class="stat-icon" style="color:var(--red);background:var(--red-soft)">!</span></div><div class="stat-value low" id="lowStockCount">0</div><div class="stat-note">At or below alert level</div></article>
+    </section>
+
+    <section class="panel" aria-label="Products">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <label class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input id="searchInput" type="search" placeholder="Search products..." aria-label="Search products"></label>
+          <select class="filter-select" id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
+        </div>
+        <div class="toolbar-right"><span class="result-count" id="resultCount">0 products</span><button class="button button-quiet" id="exportButton" type="button" title="Download inventory as CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>Export CSV</button><button class="button button-quiet" id="printButton" type="button" title="Print stock report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/><path d="M17 11h.01"/></svg>Print</button></div>
+      </div>
+      <div class="print-only" id="printDate"></div>
+      <div class="table-scroll" id="tableRegion"></div>
+    </section>
+    <footer class="how-it-works"><strong>Works 100% offline. No data needed. Your inventory stays on your phone.</strong></footer>
+  </main>
+
+  <dialog id="productDialog">
+    <form id="productForm" novalidate>
+      <div class="dialog-head"><div><h2 class="dialog-title" id="productDialogTitle">Add product</h2><p class="dialog-subtitle">Keep your stock details up to date.</p></div><button class="close-button" type="button" data-close="productDialog" aria-label="Close">×</button></div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field full"><label for="productName">Product name</label><input id="productName" name="name" maxlength="90" placeholder="e.g. Classic notebook" required></div>
+          <div class="field full"><label for="productCategory">Category</label><input id="productCategory" name="category" list="categorySuggestions" maxlength="50" placeholder="e.g. Stationery" required><datalist id="categorySuggestions"></datalist></div>
+          <div class="field"><label for="buyingPrice">Buying price</label><input id="buyingPrice" name="buyingPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+          <div class="field"><label for="sellingPrice">Selling price</label><input id="sellingPrice" name="sellingPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+          <div class="field"><label for="productQuantity">Quantity</label><input id="productQuantity" name="quantity" type="number" min="0" step="1" inputmode="numeric" placeholder="0" required></div>
+          <div class="field"><label for="alertLevel">Low-stock alert</label><input id="alertLevel" name="alertLevel" type="number" min="0" step="1" inputmode="numeric" placeholder="5" required><span class="field-hint">Alert when quantity reaches this level.</span></div>
+        </div>
+        <p class="form-error" id="productError" role="alert"></p>
+        <div class="dialog-footer"><button class="button" type="button" data-close="productDialog">Cancel</button><button class="button button-primary" type="submit">Save product</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="stockDialog">
+    <form id="stockForm" novalidate>
+      <div class="dialog-head"><div><h2 class="dialog-title">Update stock</h2><p class="dialog-subtitle" id="stockProductLabel"></p></div><button class="close-button" type="button" data-close="stockDialog" aria-label="Close">×</button></div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field full"><label for="stockAction">Stock movement</label><select id="stockAction" required><option value="in">Stock in</option><option value="out">Stock out</option></select></div>
+          <div class="field"><label for="stockAmount">Quantity</label><input id="stockAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="1" required></div>
+          <div class="field"><label for="stockReason">Reason</label><select id="stockReason" required></select></div>
+        </div>
+        <div class="movement-preview" id="stockPreview"></div>
+        <p class="form-error" id="stockError" role="alert"></p>
+        <div class="dialog-footer"><button class="button" type="button" data-close="stockDialog">Cancel</button><button class="button button-primary" type="submit">Update stock</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    (() => {
+      'use strict';
+      const KEYS = { products: 'stockbase.products.v1', movements: 'stockbase.movements.v1', currency: 'stockbase.currency.v1' };
+      const CURRENCIES = ['₦', '$', '£', '€', 'GH₵', 'KSh', 'R'];
+      const $ = (selector) => document.querySelector(selector);
+      const productDialog = $('#productDialog');
+      const stockDialog = $('#stockDialog');
+      let products = readStored(KEYS.products, []);
+      let movements = readStored(KEYS.movements, []);
+      let currency = localStorage.getItem(KEYS.currency) || '₦';
+      let editingId = null;
+      let movingId = null;
+
+      function readStored(key, fallback) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+          return Array.isArray(parsed) ? parsed : fallback;
+        } catch { return fallback; }
+      }
+      function save() {
+        localStorage.setItem(KEYS.products, JSON.stringify(products));
+        localStorage.setItem(KEYS.movements, JSON.stringify(movements));
+      }
+      function makeId() {
+        return window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
+      function money(value) {
+        const amount = Number(value) || 0;
+        return `${currency}${new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount)}`;
+      }
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+      }
+      function categories() {
+        return [...new Set(products.map((product) => String(product.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      }
+      function syncCategories() {
+        const selected = $('#categoryFilter').value;
+        const list = categories();
+        $('#categoryFilter').innerHTML = '<option value="">All categories</option>' + list.map((item) => `<option value="${escapeHTML(item)}">${escapeHTML(item)}</option>`).join('');
+        $('#categoryFilter').value = list.includes(selected) ? selected : '';
+        $('#categorySuggestions').innerHTML = list.map((item) => `<option value="${escapeHTML(item)}"></option>`).join('');
+      }
+      function render() {
+        syncCategories();
+        const lowItems = products.filter((product) => Number(product.quantity) <= Number(product.alertLevel));
+        const stockValue = products.reduce((total, product) => total + Number(product.buyingPrice) * Number(product.quantity), 0);
+        const potentialProfit = products.reduce((total, product) => total + (Number(product.sellingPrice) - Number(product.buyingPrice)) * Number(product.quantity), 0);
+        $('#totalProducts').textContent = products.length.toLocaleString();
+        $('#totalStockValue').textContent = money(stockValue);
+        $('#totalPotentialProfit').textContent = money(potentialProfit);
+        $('#lowStockCount').textContent = lowItems.length.toLocaleString();
+
+        const query = $('#searchInput').value.trim().toLocaleLowerCase();
+        const category = $('#categoryFilter').value;
+        const shown = products.filter((product) => {
+          const matchesSearch = `${product.name} ${product.category}`.toLocaleLowerCase().includes(query);
+          return matchesSearch && (!category || product.category === category);
+        }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        $('#resultCount').textContent = `${shown.length} ${shown.length === 1 ? 'product' : 'products'}`;
+        if (!shown.length) {
+          const hasProducts = products.length > 0;
+          $('#tableRegion').innerHTML = `<div class="empty-state"><div class="empty-symbol">${hasProducts ? '⌕' : '▤'}</div><div class="empty-title">${hasProducts ? 'No matching products' : 'Your inventory starts here'}</div><p class="empty-copy">${hasProducts ? 'Try a different search or category.' : 'Add your first product to start tracking stock.'}</p>${hasProducts ? '' : '<button class="button button-primary" type="button" data-action="add">Add your first product</button>'}</div>`;
+          return;
+        }
+        const rows = shown.map((product) => {
+          const isLow = Number(product.quantity) <= Number(product.alertLevel);
+          const unitProfit = Number(product.sellingPrice) - Number(product.buyingPrice);
+          return `<tr>
+            <td><span class="product-name">${escapeHTML(product.name)}</span></td>
+            <td><span class="category-pill">${escapeHTML(product.category)}</span></td>
+            <td class="money">${money(product.buyingPrice)}</td>
+            <td class="money">${money(product.sellingPrice)}</td>
+            <td class="money ${unitProfit >= 0 ? 'profit' : ''}" style="${unitProfit >= 0 ? 'color:var(--green)' : 'color:var(--red)'}">${money(unitProfit)}</td>
+            <td><span class="quantity ${isLow ? 'is-low' : ''}">${Number(product.quantity).toLocaleString()}</span>${isLow ? '<span class="low-pill">Low stock</span>' : ''}</td>
+            <td>${Number(product.alertLevel).toLocaleString()}</td>
+            <td><div class="row-actions">
+              <button class="icon-button stock-action" type="button" data-action="stock" data-id="${escapeHTML(product.id)}" title="Update stock" aria-label="Update stock for ${escapeHTML(product.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+              <button class="icon-button" type="button" data-action="edit" data-id="${escapeHTML(product.id)}" title="Edit product" aria-label="Edit ${escapeHTML(product.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg></button>
+              <button class="icon-button" type="button" data-action="delete" data-id="${escapeHTML(product.id)}" title="Delete product" aria-label="Delete ${escapeHTML(product.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
+            </div></td>
+          </tr>`;
+        }).join('');
+        $('#tableRegion').innerHTML = `<table><thead><tr><th>Product</th><th>Category</th><th>Buying price</th><th>Selling price</th><th>Profit / item</th><th>Quantity</th><th>Alert at</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+      function openProduct(product = null) {
+        editingId = product ? product.id : null;
+        $('#productForm').reset();
+        $('#productError').textContent = '';
+        $('#productDialogTitle').textContent = product ? 'Edit product' : 'Add product';
+        $('#productName').value = product?.name || '';
+        $('#productCategory').value = product?.category || '';
+        $('#buyingPrice').value = product?.buyingPrice ?? '';
+        $('#sellingPrice').value = product?.sellingPrice ?? '';
+        $('#productQuantity').value = product?.quantity ?? '';
+        $('#alertLevel').value = product?.alertLevel ?? 5;
+        productDialog.showModal();
+        $('#productName').focus();
+      }
+      function openStock(product) {
+        movingId = product.id;
+        $('#stockForm').reset();
+        $('#stockError').textContent = '';
+        $('#stockProductLabel').textContent = `${product.name} · ${Number(product.quantity).toLocaleString()} in stock`;
+        $('#stockAction').value = 'in';
+        syncStockReasons();
+        updateStockPreview();
+        stockDialog.showModal();
+        $('#stockAmount').focus();
+      }
+      function syncStockReasons() {
+        const isIn = $('#stockAction').value === 'in';
+        $('#stockReason').innerHTML = isIn ? '<option value="restock">Restock</option>' : '<option value="sale">Sale</option><option value="damaged">Damaged</option>';
+      }
+      function updateStockPreview() {
+        const product = products.find((item) => item.id === movingId);
+        if (!product) return;
+        const amount = Math.max(0, Number($('#stockAmount').value) || 0);
+        const next = Number(product.quantity) + ( $('#stockAction').value === 'in' ? amount : -amount );
+        $('#stockPreview').innerHTML = `Current stock: <strong>${Number(product.quantity).toLocaleString()}</strong> &nbsp;→&nbsp; After update: <strong>${Math.max(0, next).toLocaleString()}</strong>`;
+      }
+      function exportCSV() {
+        const header = ['Product', 'Category', 'Buying price', 'Selling price', 'Profit per item', 'Quantity', 'Low-stock alert', 'Stock value', 'Potential profit'];
+        const csvRows = [header, ...products.map((product) => {
+          const buying = Number(product.buyingPrice), selling = Number(product.sellingPrice), quantity = Number(product.quantity);
+          return [product.name, product.category, buying, selling, selling - buying, quantity, product.alertLevel, buying * quantity, (selling - buying) * quantity];
+        })];
+        const csv = '\uFEFF' + csvRows.map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `stockbase-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      $('#currencySelect').value = CURRENCIES.includes(currency) ? currency : '₦';
+      currency = $('#currencySelect').value;
+      $('#currencySelect').addEventListener('change', (event) => {
+        currency = event.target.value;
+        localStorage.setItem(KEYS.currency, currency);
+        render();
+      });
+      $('#addProductButton').addEventListener('click', () => openProduct());
+      $('#searchInput').addEventListener('input', render);
+      $('#categoryFilter').addEventListener('change', render);
+      $('#exportButton').addEventListener('click', exportCSV);
+      $('#exportTop').addEventListener('click', exportCSV);
+      $('#printButton').addEventListener('click', () => {
+        $('#printDate').textContent = `Stock report · ${new Date().toLocaleString()}`;
+        window.print();
+      });
+      $('#stockAction').addEventListener('change', () => { syncStockReasons(); updateStockPreview(); });
+      $('#stockAmount').addEventListener('input', updateStockPreview);
+      document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.close).close()));
+      document.querySelectorAll('dialog').forEach((dialog) => dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+      }));
+      $('#tableRegion').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
+        const product = products.find((item) => item.id === button.dataset.id);
+        if (button.dataset.action === 'add') openProduct();
+        if (!product) return;
+        if (button.dataset.action === 'edit') openProduct(product);
+        if (button.dataset.action === 'stock') openStock(product);
+        if (button.dataset.action === 'delete' && window.confirm(`Delete “${product.name}”? This cannot be undone.`)) {
+          products = products.filter((item) => item.id !== product.id);
+          save();
+          render();
+        }
+      });
+      $('#productForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const name = $('#productName').value.trim();
+        const category = $('#productCategory').value.trim();
+        const buyingPrice = Number($('#buyingPrice').value);
+        const sellingPrice = Number($('#sellingPrice').value);
+        const quantity = Number($('#productQuantity').value);
+        const alertLevel = Number($('#alertLevel').value);
+        const error = $('#productError');
+        error.textContent = '';
+        if (!name || !category) { error.textContent = 'Enter a product name and category.'; return; }
+        if (![buyingPrice, sellingPrice, quantity, alertLevel].every(Number.isFinite) || buyingPrice < 0 || sellingPrice < 0 || quantity < 0 || alertLevel < 0 || !Number.isInteger(quantity) || !Number.isInteger(alertLevel)) {
+          error.textContent = 'Prices must be zero or more, and quantities must be whole numbers.'; return;
+        }
+        const duplicate = products.some((item) => item.id !== editingId && item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase() && item.category.trim().toLocaleLowerCase() === category.toLocaleLowerCase());
+        if (duplicate) { error.textContent = 'A product with this name already exists in that category.'; return; }
+        const product = { id: editingId || makeId(), name, category, buyingPrice, sellingPrice, quantity, alertLevel, updatedAt: new Date().toISOString() };
+        if (editingId) products = products.map((item) => item.id === editingId ? { ...item, ...product } : item);
+        else products.push({ ...product, createdAt: product.updatedAt });
+        save();
+        productDialog.close();
+        render();
+      });
+      $('#stockForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const product = products.find((item) => item.id === movingId);
+        const amount = Number($('#stockAmount').value);
+        const action = $('#stockAction').value;
+        const error = $('#stockError');
+        error.textContent = '';
+        if (!product) { stockDialog.close(); return; }
+        if (!Number.isInteger(amount) || amount < 1) { error.textContent = 'Enter a whole-number quantity of at least 1.'; return; }
+        if (action === 'out' && amount > Number(product.quantity)) { error.textContent = `Only ${Number(product.quantity).toLocaleString()} available. Stock cannot go below zero.`; return; }
+        const reason = $('#stockReason').value;
+        const before = Number(product.quantity);
+        product.quantity = before + (action === 'in' ? amount : -amount);
+        product.updatedAt = new Date().toISOString();
+        movements.unshift({ id: makeId(), productId: product.id, productName: product.name, action, reason, amount, before, after: product.quantity, createdAt: new Date().toISOString() });
+        movements = movements.slice(0, 500);
+        save();
+        stockDialog.close();
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
